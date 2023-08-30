@@ -1,18 +1,31 @@
 name: Inkay-CI
 
-on: push
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
-    build-inkay:
-        runs-on: ubuntu-22.04
-        steps:
-            - uses: actions/checkout@v2
-            - name: build toolchain container
-              run: docker build . -t builder
-            - uses: ammaraskar/gcc-problem-matcher@master
-            - name: build Inkay
-              run: docker run --rm -v ${PWD}:/app -w /app builder
-            - uses: actions/upload-artifact@master
-              with:
-                  name: inkay
-                  path: "*.wps"
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [10.x, 12.x, 14.x, 16.x, 18.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm install
+    - run: npm run build --if-present
+    - shell: bash
+      env:
+        GDRIVE_FILEFOLDER_ID: ${{ secrets.GDRIVE_FILEFOLDER_ID }}
+        GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+        GOOGLE_PRIVATE_KEY: '${{ secrets.GOOGLE_PRIVATE_KEY }}'
+      run: npm test
